@@ -1,0 +1,13 @@
+numpy
+pymeep
+nlopt
+GPyOpt
+dlib
+tensorflow==1.15
+keras
+networkx
+requests
+pandas
+ase
+dscribe
+neural-tangents==0.3.5
