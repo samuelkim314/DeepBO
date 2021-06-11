@@ -17,11 +17,11 @@ class BaseNetwork:
         # Build architecture graph while keeping track of all TensorFlow variables associated with this graph
         temp = set(tf.global_variables())   # Set (unordered collection) of all variables
         self.yhat = self.build()
-        self.vars = set(tf.global_variables()) - temp   # Subtracting out previous set to get just variables for the
-                                                        # architecture
+        # Subtracting out previous set to get just variables for the architecture
+        self.vars = set(tf.global_variables()) - temp
 
         self.mse = tf.reduce_mean(tf.square(self.y - self.yhat))
-        self.loss = self.mse
+        self.loss = self.mse    # Loss is what we optimize. Can add regularization terms.
         self.optimizer = optimizer
         self.opt_vars = self.optimizer.variables()
         self.minimizer = self.optimizer.minimize(self.loss)

@@ -4,6 +4,7 @@ import time
 from lib import acquisition as bo
 from lib import data_manager
 from lib.models import nn
+from lib.helpers import get_trial_dir
 import os
 import sys
 import numpy as np
@@ -63,20 +64,6 @@ def get_problem(leveller=None, objective="gap", sample_full=True):
 
     return obj_fun
 
-
-def get_trial_dir(dir_format, i0=0):
-    i = i0
-    while True:
-        results_dir_i = dir_format % i
-        if os.path.isdir(results_dir_i):
-            i += 1
-        else:
-            try:
-                os.makedirs(results_dir_i)
-                break
-            except FileExistsError:
-                pass
-    return results_dir_i, i
 #
 #
 # obj_fun2 = get_obj(objective='dos')
@@ -192,12 +179,10 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                     # Object to control minibatches
                     dm = data_manager.ImageDataManager(X_nn_train, Y_train, n_batch)
                     # Initialize Bayesian neural network
-                    model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i,
-                                            print_loss=False, opt_name="adam", n_channels=n_channels, n_units=n_units)
+                    model = nn.choose_model(**nn_args, dm=dm, opt_name="adam", n_channels=n_channels, n_units=n_units)
                 else:
                     dm = data_manager.DataManager(X_nn_train, Y_train, n_batch)
-                    model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i,
-                                            print_loss=False, opt_name="adam", n_units=n_units)
+                    model = nn.choose_model(**nn_args, dm=dm,  opt_name="adam", n_units=n_units)
 
                 def f(samples):
                     """Return samples from the posterior distribution of predictions"""
@@ -215,27 +200,18 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                 n_data_arr = []
                 y_best_list = []
 
-                x_nn_new = None
-                y_new = None
-
                 for i in range(n_train):
                     if i % iter_restart_training == 0:
                         model.reset(sess)  # Retrain the model from scratch after we collect each point
                         epochs_i = n_epochs
-                        x_nn_new = None
-                        y_new = None
                         cycle_i = False
                     else:   # Continue training
                         epochs_i = n_epochs_continue
-                        if not weighted_training:
-                            x_nn_new = None
-                            y_new = None
                         cycle_i = lr_cycle
 
                     # Training step
-                    loss_final = model.train(sess, epochs_i, dm, X_val=X_nn_train, Y_val=Y_train, print_loss=False,
-                                             save_model=False, early_stopping=True, x_new=x_nn_new, y_new=y_new,
-                                             augment=augment, augment_sg11=augment, cycle=cycle_i)
+                    loss_final = model.train(sess, epochs_i, dm, X_val=X_nn_train, Y_val=Y_train,
+                                             save_model=False, augment=augment, augment_sg11=augment, cycle=cycle_i)
 
                     # Random set of unlabelled x points - we will use Bayesian optimization to choose which one to label
                     if opt == 'cnn':
@@ -318,12 +294,10 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                     # Object to control minibatches
                     dm = data_manager.ImageDataManager(X_nn_train, Z_train, n_batch)
                     # Initialize Bayesian neural network
-                    model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i,
-                                            print_loss=False, opt_name="adam", n_channels=n_channels, n_units=n_units)
+                    model = nn.choose_model(**nn_args, dm=dm, opt_name="adam", n_channels=n_channels, n_units=n_units)
                 else:
                     dm = data_manager.DataManager(X_nn_train, Z_train, n_batch)
-                    model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i,
-                                            print_loss=False, opt_name="adam", n_units=n_units)
+                    model = nn.choose_model(**nn_args, dm=dm, opt_name="adam", n_units=n_units)
 
                 def f(samples):
                     """Return samples from the posterior distribution of predictions"""
@@ -341,27 +315,18 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                 n_data_arr = []
                 y_best_list = []
 
-                x_nn_new = None
-                z_new = None
-
                 for i in range(n_train):
                     if i % iter_restart_training == 0:
                         model.reset(sess)  # Retrain the model from scratch after we collect each point
                         epochs_i = n_epochs
-                        x_nn_new = None
-                        z_new = None
                         cycle_i = lr_cycle_base
                     else:  # Continue training
                         epochs_i = n_epochs_continue
-                        if not weighted_training:
-                            x_nn_new = None
-                            z_new = None
                         cycle_i = lr_cycle
 
                     # Training step
-                    loss_final = model.train(sess, epochs_i, dm, X_val=X_nn_train, Y_val=Z_train, print_loss=False,
-                                             save_model=False, early_stopping=True, x_new=x_nn_new, y_new=z_new,
-                                             augment=augment, augment_sg11=augment, cycle=cycle_i)
+                    loss_final = model.train(sess, epochs_i, dm, X_val=X_nn_train, Y_val=Z_train,
+                                             save_model=False, augment=augment, augment_sg11=augment, cycle=cycle_i)
 
                     # Random set of unlabelled x points - we will use Bayesian optimization to choose which one to label
                     # x_new has shape (1, xdim)
@@ -410,178 +375,6 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                          time_tot=time_tot, best_x=x_best, best_x_nn=x_nn_best, z_best=z_best)
                 print(x_best)
                 print(y_best)
-    elif opt == "nlopt":
-        for trial in range(trials):
-            opt = nlopt.opt(nlopt.GN_DIRECT_L, xdim)
-            # GN_DIRECT
-            # GN_CRS2_LM
-            # G_MLSL_LDS
-            # G_MLSL
-            # GD_STOGO  - not sure if included. uses gradients
-            # GD_STOGO_RAND - not sure if included. uses gradients for local
-            # GN_AGS
-            # GN_ISRES - improved Stochastic Ranking Evolution Strategy
-            # GN_ESCH - Evolutionary Algorith m
-
-            obj_temp = []
-
-            def f(x, grad):
-                value = obj_fun2(obj_fun(x[np.newaxis, :]))[0]
-                print(value)
-                nonlocal obj_temp
-                obj_temp.append(value)
-
-                return value.astype(np.float64)
-
-            opt.set_max_objective(f)
-            opt.set_lower_bounds([0] * xdim)
-            opt.set_upper_bounds([1] * xdim)
-            opt.set_maxeval(n_train)
-
-            x0 = np.random.rand(xdim)
-            xopt = opt.optimize(x0)
-            print(xopt)
-            maxf = opt.last_optimum_value()
-            print(maxf)
-            print(opt.get_numevals())
-
-            results_dir_i, _ = get_trial_dir(os.path.join(results_dir, 'trial%d'), trial_i)
-            np.savez(os.path.join(results_dir_i, 'best'), best_x=xopt, best_y=maxf, obj_list=obj_temp,
-                     num_evals=opt.get_numevals())
-    elif opt == 'ntk' or opt == 'nt-gp':
-        # import jax.numpy as np
-        os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/local/cuda"
-        from jax import random
-        from jax.experimental import optimizers
-        from jax.api import jit, grad, vmap
-        import neural_tangents as nt
-        from neural_tangents import stax
-
-        n_start = 5     # Size of initial dataset
-
-        for _ in range(trials):
-            results_dir_i, _ = get_trial_dir(os.path.join(results_dir, 'trial%d'), trial_i)
-
-            X_train = np.random.rand(n_start, xdim)
-            X_nn_train = leveller.calc_data(X_train, sample_level=True, sample_full=sample_full)[:, :, :, np.newaxis]
-            Y_train = obj_fun2(obj_fun(X_train))[:, np.newaxis]
-
-            # Object to control minibatches
-            dm = data_manager.ImageDataManager(X_nn_train, Y_train, n_batch)
-
-            parameterization = 'standard' # 'standard' or 'ntk'
-            pool = False
-            if pool:
-                init_fn, apply_fn, kernel_fn = stax.serial(
-                    stax.Conv(32, (3, 3), (1, 1), padding='CIRCULAR'), stax.Relu(),
-                    stax.AvgPool((2, 2), (2, 2), padding='CIRCULAR'),
-                    stax.Conv(32, (3, 3), (1, 1), padding='CIRCULAR'), stax.Relu(),
-                    stax.AvgPool((2, 2), (2, 2), padding='CIRCULAR'),
-                    stax.Conv(32, (3, 3), (2, 2), padding='CIRCULAR'), stax.Relu(),
-                    stax.AvgPool((2, 2), (1, 1), padding='CIRCULAR'),
-                    stax.Conv(32, (3, 3), (2, 2), padding='CIRCULAR'), stax.Relu(),
-                    stax.AvgPool((2, 2), (2, 2), padding='CIRCULAR'),
-                    stax.Conv(32, (3, 3), (2, 2), padding='CIRCULAR'), stax.Relu(),
-                    stax.AvgPool((2, 2), (2, 2), padding='CIRCULAR'),
-                    stax.Flatten(),
-                    stax.Dense(128), stax.Relu(),
-                    stax.Dense(64), stax.Relu(),
-                    stax.Dense(16), stax.Relu(),
-                    stax.Dense(4), stax.Relu(),
-                    stax.Dense(1)
-                )
-            else:
-                init_fn, apply_fn, kernel_fn = stax.serial(
-                    stax.Conv(32, (5, 5), (1, 1), padding='CIRCULAR', parameterization=parameterization), stax.Relu(),
-                    stax.Conv(32, (5, 5), (1, 1), padding='CIRCULAR', parameterization=parameterization), stax.Relu(),
-                    stax.Conv(32, (5, 5), (1, 1), padding='CIRCULAR', parameterization=parameterization), stax.Relu(),
-                    stax.Conv(32, (5, 5), (1, 1), padding='CIRCULAR', parameterization=parameterization), stax.Relu(),
-                    stax.Conv(32, (5, 5), (1, 1), padding='CIRCULAR', parameterization=parameterization), stax.Relu(),
-                    stax.Flatten(),
-                    stax.Dense(128, parameterization=parameterization), stax.Relu(),
-                    stax.Dense(64, parameterization=parameterization), stax.Relu(),
-                    stax.Dense(16, parameterization=parameterization), stax.Relu(),
-                    stax.Dense(4, parameterization=parameterization), stax.Relu(),
-                    stax.Dense(1, parameterization=parameterization)
-                )
-            if opt == 'ntk':
-                kernel_fn = jit(kernel_fn, static_argnums=(2,))
-
-            start_time = time.time()
-
-            # Best candidate data point so far
-            y_best_i = np.argmax(Y_train, axis=0)
-            x_best = X_train[y_best_i, :]
-            y_best = np.max(Y_train)
-
-            n_data_arr = []
-            y_best_list = []
-
-            x_nn_best = None
-            x_nn_new = None
-            y_new = None
-
-            for i in range(n_train):
-
-                x_sample = np.random.rand(int(1e5), xdim)
-                x_nn_sample = leveller.calc_data(x_sample, sample_level=True,
-                                                 sample_full=sample_full)[:, :, :, np.newaxis]
-
-                if opt == 'ntk':
-                    predict_fn = nt.predict.gradient_descent_mse_ensemble(kernel_fn, X_nn_train, Y_train, diag_reg=1e-4)
-
-                    def f(x):
-                        mean, covariance = predict_fn(x_test=x, get=kernel, compute_cov=True)
-                        return mean, np.sqrt(np.diag(covariance))[:, np.newaxis]
-                else:   # opt == 'nt-gp'
-                    if kernel == 'nngp':
-                        kernel_train_train = kernel_fn(X_nn_train, X_nn_train, 'nngp')
-                    else:
-                        kernel_train_train = kernel_fn(X_nn_train, X_nn_train)  # Need both NTK and NNGP covariances
-                    predict_fn = nt.predict.gp_inference(kernel_train_train, Y_train)
-
-                    def f(x):
-                        if kernel == 'nngp':
-                            k_test_train = kernel_fn(x, X_nn_train, 'nngp')
-                        else:
-                            k_test_train = kernel_fn(x, X_nn_train)
-                        nngp_test_test = kernel_fn(x, None, 'nngp')
-                        mean, covariance = predict_fn(get=kernel, k_test_train=k_test_train,
-                                                      nngp_test_test=nngp_test_test)
-                        return mean, np.sqrt(np.diag(covariance)[:, np.newaxis])
-
-                i_new, x_nn_new = bo.ei_direct_batched(x_nn_sample, f, y_best, batch_size=256)
-                x_nn_new = x_nn_new[np.newaxis]     # Shape (1, 32, 32, 1)
-                x_new = x_sample[i_new][np.newaxis, :]
-
-                y_new = obj_fun2(obj_fun(x_new))[:, np.newaxis]
-                # Add the labelled data point to our training data set
-                X_train = np.vstack((X_train, x_new))
-                print(X_nn_train.shape)
-                print(x_nn_new.shape)
-                X_nn_train = np.vstack((X_nn_train, x_nn_new))
-                Y_train = np.vstack((Y_train, y_new))
-                dm.add_data(x_nn_new, y_new)
-
-                # Update the best data point so far
-                i_best = np.argmax(Y_train)
-                x_best = X_train[i_best]
-                x_nn_best = X_nn_train[i_best]
-                y_best = Y_train[i_best]
-
-                # Save results to a file
-                n_data_arr.append(dm.n)
-                y_best_list.append(y_best)
-                print("Trained with %d data points. Best value=%f" % (dm.n, y_best))
-                np.savez(os.path.join(results_dir_i, 'best'), n_data=n_data_arr, best_y=y_best_list, best_x=x_best,
-                         best_x_nn=x_nn_best)
-
-            time_tot = time.time() - start_time
-            print("Took %f seconds" % time_tot)
-            np.savez(os.path.join(results_dir_i, 'best'), n_data=n_data_arr, best_y=y_best_list,
-                     time_tot=time_tot, best_x=x_best, best_x_nn=x_nn_best)
-            print(x_best)
-            print(y_best)
 
 
 if __name__ == "__main__":

@@ -108,8 +108,10 @@ def add_args(parser):
 
 
 def process_args(kwargs):
-    nn_keys = ['uncertainty', 'lr', 'lr_decay', 'drop_rate', 'n_ensemble', 'activation',
-               'bbb_sigma1', 'bbb_sigma2', 'bbb_pi', 'bbb_sigma', 'anneal']
+    nn_keys = ['uncertainty', 'lr', 'lr_decay', 'activation',
+               'drop_rate',
+               'n_ensemble',
+               'bbb_sigma1', 'bbb_sigma2', 'bbb_pi', 'bbb_sigma']
     nn_args = {}
     args = {}
     for k, v in kwargs.items():

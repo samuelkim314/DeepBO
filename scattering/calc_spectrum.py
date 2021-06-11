@@ -31,46 +31,18 @@ class MieScattering:
         # h = 4.14e-15 eV*s, hbar = 6.58e-16 eV*s
         # eps_inf = 5
 
-        # Gold: Olmon, Robert L., et al. "Optical dielectric function of gold." Physical Review B 86.23 (2012): 235147.
-        self.eps_au = 1 - (8.5 / 6.58e-16) ** 2 / ((2 * np.pi * 3e8 / (self.lam * 1e-9)) ** 2 + (1 / 14e-15) ** 2)
-
-        self.eps_zno = 8.5      # Zinc oxide ZnO
-        self.eps_feo = 14.2     # iron oxide Fe2O3
-
-        # ITO
-        # self.eps_ito = 4 -
-
-    def sample_x(self, n_data, onehot=False):
+    def sample_x(self, n_data):
         """Generate random dataset features (X) of size n_data and feature size n_layers
         Used mostly for active learning purposes. If you want both X and Y, use gen_data"""
 
-        x_cont = np.random.rand(n_data, self.n_layers)
-        x_cont = x_cont * (self.th_max - self.th_min) + self.th_min
-        if self.sample_mat:
-            x_cat = np.random.randint(0, self.n_mat, (n_data, self.n_layers))
-            if onehot:
-                x_cat = self.toonehot(x_cat)
-            x = np.concatenate((x_cat, x_cont), axis=1)
-        else:
-            x = x_cont
+        x = np.random.rand(n_data, self.n_layers)
+        x = x * (self.th_max - self.th_min) + self.th_min
         return x
-
-    def toonehot(self, x):
-        """Convert NxM matrix t from categorical to one-hot encoding, where all features are categorical"""
-        x_onehot = []
-        for x_i in x:
-            x_onehot.append(np.eye(self.n_mat)[x_i.astype(int)].ravel())
-        return np.array(x_onehot)
 
     def to_nn_input(self, x):
         """Convert NxM matrix (generated from sample_x) into a form suitable for feeding into a neural network"""
-        if self.sample_mat:
-            x_norm = self.norm(x[:, self.n_mat:])  # Normalizing continuous variables
-            x_onehot = self.toonehot(x[:, :self.n_mat])
-            return np.concatenate((x_onehot, x_norm), axis=1)
-        else:
-            x_norm = self.norm(x)
-            return x_norm
+        x_norm = self.norm(x)
+        return x_norm
 
     def gen_data(self, n_data):
         """Generate dataset (X and Y) of size n_data"""
@@ -130,25 +102,11 @@ class MieScattering:
 
         # permittivity
         eps = np.empty((m + 1, self.n_lam))
-        if self.sample_mat:
-            for i in range(m):
-                if int(x[i]) == 0:
-                    eps[i, :] = self.eps_silica
-                elif int(x[i]) == 1:
-                    eps[i, :] = self.eps_tio2
-                elif int(x[i]) == 2:
-                    # eps[i, :] = self.eps_ag
-                    eps[i, :] = self.eps_zno
-                elif int(x[i]) == 3:
-                    eps[i, :] = self.eps_feo
-                else:
-                    raise ValueError('Material index must be integer 0-3')
-        else:
-            for i in range(m):
-                if i % 2 == 0:
-                    eps[i, :] = self.eps_silica
-                else:
-                    eps[i, :] = self.eps_tio2
+        for i in range(m):
+            if i % 2 == 0:
+                eps[i, :] = self.eps_silica
+            else:
+                eps[i, :] = self.eps_tio2
 
         eps[-1, :] = self.eps_water
 
@@ -165,10 +123,7 @@ class MieScattering:
         else:
             order = 25
 
-        if self.sample_mat:
-            th = x[self.n_layers:]
-        else:
-            th = x
+        th = x
 
         return cs.total_cs(th, self.omega, eps, order) / (np.pi * sum(th) ** 2)
 
