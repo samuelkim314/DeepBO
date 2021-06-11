@@ -5,6 +5,7 @@ import time
 from lib import acquisition as bo
 from lib import data_manager
 from lib.models import nn
+from lib.helpers import get_trial_dir
 import os
 import numpy as np
 from scattering import calc_spectrum
@@ -47,25 +48,10 @@ def get_problem(params, objective="orange"):
     return prob
 
 
-def get_trial_dir(dir_format, i0=0):
-    i = i0
-    while True:
-        results_dir_i = dir_format % i
-        if os.path.isdir(results_dir_i):
-            i += 1
-        else:
-            try:
-                os.makedirs(results_dir_i)
-                break
-            except FileExistsError:
-                pass
-    return results_dir_i, i
-
-
 def main(results_dir,  n_batch, n_epochs, n_train=1000,
          opt="random", acquisition="ei", objective="orange", x_dim=6, trials=1, nn_args=None,
          n_epochs_continue=10, iter_restart_training=100, af_n=30, af_m=int(1e4), trial_i=0,
-         n_units=0, n_layers=0, n_start=5, lr_cycle=False, lr_cycle_base=False):
+         n_units=256, n_layers=8, n_start=5, lr_cycle=False, lr_cycle_base=False):
     params = calc_spectrum.MieScattering(n_layers=x_dim)
 
     prob_fun = get_problem(params, objective=objective)
@@ -142,7 +128,7 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                 X_nn_train = params.to_nn_input(X_train)
                 Y_train = obj_fun(prob_fun(X_train))[:, np.newaxis]
                 dm = data_manager.DataManager(X_nn_train, Y_train, n_batch)     # Holds data for mini-batches
-                model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i, print_loss=False, opt_name="adam",
+                model = nn.choose_model(**nn_args, dm=dm, opt_name="adam",
                                         n_units=n_units)
 
                 def f(samples):
@@ -170,15 +156,13 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                         cycle_i = lr_cycle
                         epochs_i = n_epochs_continue
                     # Training step
-                    loss_final = model.train(sess, epochs_i, dm, X_val=X_nn_train, Y_val=Y_train, print_loss=False,
-                                             save_model=False, cycle=cycle_i)
+                    loss_final = model.train(sess, epochs_i, dm, save_model=False, cycle=cycle_i)
 
                     # Random set of unlabelled x points - we will use Bayesian optimization to choose which one to label
                     x_sample = params.sample_x(int(af_m))
                     x_nn_sample = params.to_nn_input(x_sample)
                     # x_new, x_nn_new = bo.ei_direct_im(x_sample, x_nn_sample, f, y_best)
-                    if nn_args['uncertainty'] == 'bbb' or nn_args['uncertainty'] == 'mnf' or \
-                            nn_args['uncertainty'] == 'ensemble':
+                    if nn_args['uncertainty'] == 'bbb' or nn_args['uncertainty'] == 'ensemble':
                         i_new, x_nn_new = bo.ei_mc(x_nn_sample, f, y_best, batch_size=int(2**13))
                         i_new = [i_new]     # Temporary hack to adjust for dimension
                     else:
@@ -233,8 +217,7 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                 Y_train = obj_fun(Z_train)
 
                 dm = data_manager.DataManager(X_nn_train, Z_train, n_batch)
-                model = nn.choose_model(**nn_args, dm=dm, results_dir=results_dir_i,
-                                        print_loss=False, opt_name="adam",
+                model = nn.choose_model(**nn_args, dm=dm, opt_name="adam",
                                         n_units=n_units)
 
                 def f(samples):
@@ -266,8 +249,7 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                         cycle_i = lr_cycle
 
                     # Training step
-                    _ = model.train(sess, epochs_i, dm, print_loss=False,
-                                    save_model=False, cycle=cycle_i)
+                    _ = model.train(sess, epochs_i, dm, save_model=False, cycle=cycle_i)
 
                     # Random set of unlabelled x points - we will use Bayesian optimization to choose which one to label
                     x_sample = params.sample_x(int(af_m))

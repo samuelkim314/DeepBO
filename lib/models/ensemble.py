@@ -1,18 +1,17 @@
 import numpy as np
 import tensorflow as tf
-
 from lib.models.nn_base import BaseNetwork, CNN
 
 
 class Ensemble(BaseNetwork):
     # Ensemble of fully-connected networks
-    def __init__(self, dm, results_dir, n_networks=10, print_loss=False, optimizer=None,
+    def __init__(self, dm, n_networks=10, optimizer=None,
                  hidden_units=None, lr_ph=None, lr=1e-4):
 
         self.y_hat_list = []
         self.n_networks = n_networks
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer, hidden_units=hidden_units,
+        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units,
                          lr_ph=lr_ph, lr=lr)
 
         self.N = tf.placeholder_with_default(float(dm.n), shape=(), name="num_batches")
@@ -50,27 +49,25 @@ class Ensemble(BaseNetwork):
 
         return preds
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=-1, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Train a single epoch"""
         for step in range(steps):
             x_batch, y_batch = next(batcher)
             if lr is None:
-                sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.epoch: epoch, self.N: N})
+                sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N})
             else:
-                sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.epoch: epoch, self.N: N,
-                                                    self.lr_ph: lr})
+                sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N, self.lr_ph: lr})
 
 
 class ConvEnsemble(CNN, Ensemble):
     # Ensemble of convolutional networks
-    def __init__(self, dm, results_dir, n_networks=10, print_loss=False, optimizer=None,
+    def __init__(self, dm, n_networks=10, optimizer=None,
                  n_channels=None, hidden_units=None, lr_ph=None, lr=1e-4):
 
         self.y_hat_list = []
         self.n_networks = n_networks
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer,
-                         n_channels=n_channels, hidden_units=hidden_units, lr_ph=lr_ph, lr=lr)
+        super().__init__(dm, optimizer=optimizer, n_channels=n_channels, hidden_units=hidden_units, lr_ph=lr_ph, lr=lr)
 
         self.N = tf.placeholder_with_default(float(dm.n), shape=(), name="num_batches")
 
@@ -85,7 +82,7 @@ class ConvEnsemble(CNN, Ensemble):
         self.y_hat_list = y_hat
         return tf.reduce_mean(y_hat)
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=0, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Override so that we can include random translation for data augmentation"""
         for step in range(steps):
             x_batch, y_batch = next(batcher)

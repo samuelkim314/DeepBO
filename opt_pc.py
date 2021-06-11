@@ -7,8 +7,8 @@ from lib.models import nn
 import os
 import sys
 import numpy as np
-from phc import level_set
-from dos import DOS_GGR
+from pc import level_set
+from pc import DOS_GGR
 import nlopt
 # os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/local/cuda"
 
@@ -158,69 +158,6 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
             # except Exception as e:
             #     print("Error in saving report")
             #     print(e)
-    elif opt == "dlib":
-        # Optimization (not Bayesian) using LIPO algorithm, based on the paper:
-        # Malherbe, C., & Vayatis, N. (2017). Global optimization of Lipschitz functions.
-        # arXiv preprint arXiv:1703.02628.
-        #
-        # For more info, see this blogpost: http://blog.dlib.net/2017/12/a-global-optimization-algorithm-worth.html
-        import dlib
-
-        # x, y = dlib.find_max_global(fun, [30] * xdim, [70] * xdim, n_train)
-        # print(x)
-        # print(y)
-
-        def fun(x):
-            return obj_fun2(obj_fun(np.array([x])))
-
-        best_x = []
-        best_y = []
-        best_x_j = None
-        best_y_j = None
-        for i in range(trials):
-            best_y_i = []
-            spec = dlib.function_spec([0] * xdim, [1] * xdim)
-            opt = dlib.global_function_search(spec)
-            opt.set_seed(i)
-            for j in range(n_train):
-                next_x = opt.get_next_x()
-                # if i==100:
-                #     print(next.x)
-                next_x.set(fun(next_x.x))
-                [best_x_j, best_y_j, function_idx] = opt.get_best_function_eval()
-                best_y_i.append(best_y_j)
-            print(np.array(best_x_j))
-            print(best_y_j)
-            best_x.append(best_x_j)
-            best_y.append(best_y_i)
-        y_best_list = np.mean(best_y, axis=0)
-        best_y_std = np.std(best_y, axis=0)
-        np.savez(os.path.join(results_dir, 'best'), n_data=range(n_train), best_y=y_best_list, best_y_std=best_y_std,
-                 best_x=best_x)
-    elif opt == 'cma':
-        import cma
-
-        es = cma.CMAEvolutionStrategy(np.random.rand(51), 1)
-
-        x_list = []
-        y_list = []
-
-        def f(x):
-            if x.ndim == 1:
-                x = x[np.newaxis, :]
-
-            x = (1 - np.cos(np.pi * x / 10)) / 2
-            y = obj_fun2(obj_fun(x))[0]
-            x_list.append(x)
-            y_list.append(y)
-            return -y
-
-        es.optimize(f, maxfun=1000)
-
-        es.result_pretty()
-
-        results_dir_i, _ = get_trial_dir(os.path.join(results_dir, 'trial%d'), trial_i)
-        np.savez(os.path.join(results_dir_i, 'best'), x_list=x_list, y_list=y_list)
     elif opt == "nn" or opt == 'cnn':
         # Bayesian optimization using Bayesian neural networks with continued training - directly on objective
         import warnings

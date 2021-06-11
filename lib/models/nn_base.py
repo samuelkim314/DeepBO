@@ -1,14 +1,11 @@
 import tensorflow as tf
 import numpy as np
-from lib import file_io as fio
 import sklearn.linear_model
-from lib import data_manager
 
 
 class BaseNetwork:
     """Abstract class for Bayesian neural networks"""
-    def __init__(self, dm, results_dir, print_loss=False, optimizer=None, ub=None, hidden_units=None,
-                 lr_ph=None, lr=None):
+    def __init__(self, dm, optimizer=None, hidden_units=None, lr_ph=None, lr=None):
         # shape of self.X matches that of dm.X other than first axis, which size batch_size
         # This dynamic shape allows extension ot multiple data types (e.g. images)
         self.X = tf.placeholder("float", shape=[None, *dm.X.shape[1:]], name="X")
@@ -30,20 +27,9 @@ class BaseNetwork:
         self.minimizer = self.optimizer.minimize(self.loss)
 
         # dummy variable used for epoch-dependent operations such as KL annealing
-        self.epoch = tf.placeholder_with_default(0, [])
         self.lr = lr
         self.lr_ph = lr_ph
 
-        self.bound_loss = None
-        if ub is not None:
-            self.bound_loss = tf.nn.relu(self.yhat - ub)
-            self.minimizer_bounds = optimizer.minimize(self.bound_loss)
-
-        self.results_dir = results_dir
-        if print_loss:
-            self.loss_file = fio.LossFile(results_dir)
-        else:
-            self.loss_file = None
         # self.saver = tf.train.Saver(max_to_keep=1, save_relative_paths=True)
 
     def build(self):
@@ -54,18 +40,15 @@ class BaseNetwork:
         h = tf.keras.layers.Dense(self.y_dim, activation=None)(h)
         return h
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=-1, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Train a single epoch"""
         for step in range(steps):
             x_batch, y_batch = next(batcher)
-            sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.epoch: epoch})
+            sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch})
 
     def calc_loss(self, sess, x, y):
         """Calculate loss"""
         return sess.run(self.loss, feed_dict={self.X: x, self.y: y})
-
-    def train_bound(self, sess, x):
-        sess.run(self.minimizer_bounds, feed_dict={self.X: x})
 
     def calc_mse_batch(self, sess, X, Y, batch_size):
         """Calculate validation loss by breaking up validation dataset into batches so we don't overrun GPU memory."""
@@ -93,9 +76,8 @@ class BaseNetwork:
             weight.append(len(X_batch))
         return np.average(loss, weights=weight)
 
-    def train(self, sess, epochs, dm, X_val=None, Y_val=None, print_loss=False, save_model=False, results_dir=None,
-              early_stopping=False, x_new=None, y_new=None, augment=False, augment_sg11=False, x_ub=None,
-              anneal=False, cycle=False):
+    def train(self, sess, epochs, dm, X_val=None, Y_val=None, save_model=False,
+              augment=False, augment_sg11=False, cycle=False):
         """Train the neural network
 
         Args:
@@ -103,82 +85,31 @@ class BaseNetwork:
             epochs : (int) number of epochs to train
             dm : data_manager object containing the dataset
             X_val, Y_val : (optional) validation dataset
-            print_loss : (bool) write loss to a file
             save_model : (bool) save the trained model (and checkpoints) to a Tensorflow file
-            results_dir : (str) directory to save to
-            early_stopping : (bool) use early stopping - this can save time and prevent overfitting
             augment:    (bool) flag to use data augmentation using periodic translation
             augment_sg11:   (bool) flag for data augmentation using space group 11 (flips and rotations)
         """
 
-        val_best = 0    # Best validation loss so far
-        patience = 10   # Hyper-parameter for early stopping - number of time the validation loss can increase before we
-                        # quit training
-        worse_count = 0     # Counter for how many times validation loss increases in a row
         batcher = dm.batch_iter()
-        # Can specify a new results directory for the loss file
-        if results_dir is not None and print_loss:
-            loss_file = fio.LossFile(results_dir)
-        else:
-            loss_file = self.loss_file
 
         train_loss_list = []
         val_loss_list = []
 
-        batcher_temp = None
-        if x_new is not None and y_new is not None:
-            dm_temp = data_manager.DataManager(np.repeat(x_new, 2, axis=0), np.repeat(y_new, 2, axis=0), 2)
-            batcher_temp = dm_temp.batch_iter()
-        #
-        # for epoch in range(epochs):
-        #     if anneal:
-        #         epoch_i = epoch
-        #     else:
-        #         epoch_i = 1000
-        #     if x_new is not None and y_new is not None:
-        #         self.train_epoch(sess, batcher_temp, 10, dm.n, augment, augment_sg11, epoch=epoch_i)
-
         for epoch in range(epochs):
             steps = dm.steps
-            if anneal:
-                epoch_i = epoch
-            else:
-                epoch_i = 1000
-            if x_ub is not None:
-                self.train_bound(sess, x_ub)
 
             if cycle:
                 lr = self.lr / 2 * (np.cos((np.pi * ((epoch - 1) % epochs)) / epochs) + 1)
             else:
                 lr = 1e-4
 
-            # Train a single epoch
-            if x_new is not None and y_new is not None:
-                self.train_epoch(sess, batcher_temp, 1, dm.n, augment, augment_sg11, epoch=epoch_i, lr=lr)
-
-            self.train_epoch(sess, batcher, steps, dm.n, augment, augment_sg11, epoch=epoch_i, lr=lr)
+            self.train_epoch(sess, batcher, steps, dm.n, augment, augment_sg11, lr=lr)
             if X_val is not None:
                 # Calculate the training/validation loss
                 train_loss = self.calc_mse_batch(sess, dm.X, dm.Y, dm.batch_size)
                 val_loss = self.calc_mse_batch(sess, X_val, Y_val, dm.batch_size)
                 train_loss_list.append(train_loss)
                 val_loss_list.append(val_loss)
-
-                # if early_stopping:
-                #     # Early stopping
-                #     if epoch < 10 or val_loss < val_best:
-                #         val_best = val_loss
-                #         worse_count = 0
-                #     else:
-                #         worse_count += 1
-                #     if worse_count > patience:
-                #         break
-
-                # # Save training/validation loss to a file
-                # if print_loss:
-                #     loss_file.write_loss(train_loss, val_loss)  # write to file
-                #     print("Epoch: %d \tTraining loss: %.4f \tValidation loss: %.4f" %
-                #           (epoch + 1, train_loss, val_loss))
 
                 # # Save the model
                 # if save_model and epoch % 100 == 99:
@@ -193,9 +124,6 @@ class BaseNetwork:
             return train_loss_list, val_loss_list
         else:
             return self.calc_mse_batch(sess, dm.X, dm.Y, dm.batch_size)
-
-    def close(self):
-        self.loss_file.close()
 
     def reset(self, sess):
         """Initialize or reset all model variables"""
@@ -230,8 +158,7 @@ class BaseNetwork:
 
 class CNN(BaseNetwork):
     # Convolutional network
-    def __init__(self, dm, results_dir,
-                 print_loss=False, n_channels=None, hidden_units=None, optimizer=None, lr_ph=None, lr=None):
+    def __init__(self, dm, n_channels=None, hidden_units=None, optimizer=None, lr_ph=None, lr=None):
         # self.X = tf.placeholder("float", shape=[None, dm.width, dm.height, dm.n_channels], name="X")
         # self.y = tf.placeholder("float", shape=[None, dm.y_dim], name="y")
         # self.y_dim = dm.y_dim
@@ -243,7 +170,7 @@ class CNN(BaseNetwork):
             self.n_channels = n_channels
             self.hidden_units = hidden_units
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer, hidden_units=self.hidden_units,
+        super().__init__(dm, optimizer=optimizer, hidden_units=self.hidden_units,
                          lr_ph=lr_ph, lr=lr)
 
     def build(self):
@@ -268,7 +195,7 @@ class CNN(BaseNetwork):
         h = tf.keras.layers.Dense(self.y_dim, activation=None)(h)
         return h
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=0, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Override so that we can include random translation for data augmentation"""
         for step in range(steps):
             x_batch, y_batch = next(batcher)
@@ -290,11 +217,11 @@ class CNN(BaseNetwork):
 
 class Dropout(BaseNetwork):
     # Fully-connect network with dropout
-    def __init__(self, dm, results_dir, drop_rate=0.5, print_loss=False, optimizer=None, hidden_units=None):
+    def __init__(self, dm, drop_rate=0.5, optimizer=None, hidden_units=None):
         self.rate = drop_rate
         self.rate_ph = tf.placeholder_with_default(drop_rate, shape=(), name="rate")  # dropout probability
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer, hidden_units=hidden_units)
+        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units)
 
     def build(self):
         h = self.X
@@ -318,7 +245,7 @@ class Dropout(BaseNetwork):
 
 class DropoutConv(CNN, BaseNetwork):
     # Convolutional network with dropout
-    def __init__(self, dm, results_dir, drop_rate=0.5, print_loss=False, n_channels=None, hidden_units=None, optimizer=None):
+    def __init__(self, dm, drop_rate=0.5, n_channels=None, hidden_units=None, optimizer=None):
         self.rate = drop_rate
         self.rate_ph = tf.placeholder_with_default(drop_rate, shape=(), name="rate")  # dropout probability
 
@@ -329,8 +256,7 @@ class DropoutConv(CNN, BaseNetwork):
             self.n_channels = n_channels
             self.n_units = hidden_units
 
-        super().__init__(dm, results_dir, print_loss=print_loss,
-                         n_channels=n_channels, hidden_units=hidden_units, optimizer=optimizer)
+        super().__init__(dm, n_channels=n_channels, hidden_units=hidden_units, optimizer=optimizer)
 
     def build(self):
         h = self.X
@@ -355,8 +281,7 @@ class DropoutConv(CNN, BaseNetwork):
 
 class Single(BaseNetwork):
     # Fully-connected network with the ability to optimize the input
-    def __init__(self, dm, results_dir, print_loss=False, optimizer=None, hidden_units=None, obj_fun=lambda x: x[:, 0],
-                 ub=None):
+    def __init__(self, dm, optimizer=None, hidden_units=None, obj_fun=lambda x: x[:, 0]):
 
         self.training = tf.placeholder_with_default(True, shape=[])
 
@@ -388,16 +313,6 @@ class Single(BaseNetwork):
 
         self.epoch = tf.placeholder_with_default(0, [])  # dummy variable
 
-        self.bound_loss = None
-        if ub is not None:
-            self.bound_loss = tf.nn.relu(self.yhat - ub)
-            self.minimizer_bounds = optimizer.minimize(self.bound_loss)
-
-        self.results_dir = results_dir
-        if print_loss:
-            self.loss_file = fio.LossFile(results_dir)
-        else:
-            self.loss_file = None
         # self.saver = tf.train.Saver(max_to_keep=1, save_relative_paths=True)
 
     def build(self):
@@ -420,7 +335,7 @@ class Single(BaseNetwork):
 
 class NeuralLinear(BaseNetwork):
     # Neural linear - standard network with Bayesian on the last layer
-    def __init__(self, dm, results_dir, print_loss=False, optimizer=None, hidden_units=None, lr_ph=None, lr=1e-4):
+    def __init__(self, dm, optimizer=None, hidden_units=None, lr_ph=None, lr=1e-4):
 
         self.h = None
         if hidden_units is None:
@@ -428,7 +343,7 @@ class NeuralLinear(BaseNetwork):
         else:
             self.hidden_units = hidden_units
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer, hidden_units=hidden_units,
+        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units,
                          lr_ph=lr_ph, lr=lr)
         self.clf = sklearn.linear_model.BayesianRidge()
 
@@ -467,12 +382,12 @@ class NeuralLinear(BaseNetwork):
 
 class ConvNeuralLinear(CNN, BaseNetwork):
     # Convolutional neural linear - CNN with Bayesian on the last layer
-    def __init__(self, dm, results_dir, print_loss=False, optimizer=None, n_channels=None, hidden_units=None,
+    def __init__(self, dm, optimizer=None, n_channels=None, hidden_units=None,
                  lr_ph=None, lr=1e-4):
 
         self.h = None
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer,
+        super().__init__(dm, optimizer=optimizer,
                          n_channels=n_channels, hidden_units=hidden_units, lr_ph=lr_ph, lr=lr)
         self.clf = sklearn.linear_model.BayesianRidge()
 

@@ -178,9 +178,8 @@ class BBBConvLayer(BBBLayer):
 
 class BayesByBackprop(nn_base.BaseNetwork):
     """Fully-connected network with weight uncertainty using Bayes by Backprop"""
-    def __init__(self, dm, results_dir, activation=tf.nn.relu,
-                 print_loss=False, prior_sigma1=2.0, prior_sigma2=0.1, prior_pi=0.25, data_sigma=0.01,
-                 hidden_units=None, optimizer=None, ub=None, lr_ph=None, lr=1e-4):
+    def __init__(self, dm, activation=tf.nn.relu, prior_sigma1=2.0, prior_sigma2=0.1, prior_pi=0.25, data_sigma=0.01,
+                 hidden_units=None, optimizer=None, lr_ph=None, lr=1e-4):
         """Note that hidden_units corresponds to just the hidden layers"""
         # Hyper-parameters
         self.data_sigma = data_sigma
@@ -197,7 +196,7 @@ class BayesByBackprop(nn_base.BaseNetwork):
         self.layers = []
         self.init_layers(prior_sigma1, prior_sigma2, prior_pi)
 
-        super().__init__(dm, results_dir, print_loss=print_loss, optimizer=optimizer, ub=ub,
+        super().__init__(dm, optimizer=optimizer,
                          hidden_units=self.hidden_units,
                          lr_ph=lr_ph, lr=lr)
 
@@ -271,21 +270,19 @@ class BayesByBackprop(nn_base.BaseNetwork):
                tf.nn.relu(self.yhat - self.ub)
         return loss
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=0, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         for step in range(steps):
             x_batch, y_batch = next(batcher)
             if lr is None:
                 if N is None:
-                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.epoch: epoch})
+                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, })
                 else:
-                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N, self.epoch: epoch})
+                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N})
             else:
                 if N is None:
-                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.epoch: epoch,
-                                                        self.lr_ph: lr})
+                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.lr_ph: lr})
                 else:
-                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N, self.epoch: epoch,
-                                                        self.lr_ph: lr})
+                    sess.run(self.minimizer, feed_dict={self.X: x_batch, self.y: y_batch, self.N: N, self.lr_ph: lr})
 
     def calc_loss(self, sess, x, y):
         """Calculate loss without sampling"""
@@ -307,8 +304,7 @@ class BayesByBackprop(nn_base.BaseNetwork):
 
 class BayesByBackpropConv(BayesByBackprop):
     # Convolutional network with weight uncertainty using Bayes by Backprop
-    def __init__(self, dm, results_dir,
-                 print_loss=False, prior_sigma1=2.0, prior_sigma2=0.1, prior_pi=0.25, data_sigma=0.01,
+    def __init__(self, dm, prior_sigma1=2.0, prior_sigma2=0.1, prior_pi=0.25, data_sigma=0.01,
                  n_channels=None, hidden_units=None, optimizer=None, periodic=True, lr_ph=None, lr=1e-4):
         # Hyper-parameters
         self.data_sigma = data_sigma
@@ -321,32 +317,12 @@ class BayesByBackpropConv(BayesByBackprop):
             self.n_channels = n_channels
             self.n_units = hidden_units
 
-        # Initialize all the layers with hyper-parameters
-        # self.conv_layers = []
-        # for i in range(len(self.n_channels)):
-        #     self.conv_layers.append(BBBConvLayer(prior_sigma1, prior_sigma2, prior_pi, periodic=periodic))
-        # self.dense_layers = []
-        # # +1 to add the output layer
-        # for i in range(len(self.n_units) + 1):
-        #     self.dense_layers.append(BBBLayer(prior_sigma1, prior_sigma2, prior_pi))
-        # self.layers = self.conv_layers + self.dense_layers
         self.conv_layers = None
         self.dense_layers = None
 
-        super().__init__(dm, results_dir, print_loss=print_loss, hidden_units=hidden_units, optimizer=optimizer,
+        super().__init__(dm, hidden_units=hidden_units, optimizer=optimizer,
                          prior_sigma1=prior_sigma1, prior_sigma2=prior_sigma2, prior_pi=prior_pi, data_sigma=data_sigma,
                          lr_ph=lr_ph, lr=lr)
-
-        # self.N = tf.placeholder_with_default(float(dm.n), shape=(), name="num_batches")
-        # loss = self.kl_loss(self.y, self.yhat, self.N)  # Training loss
-        # self.minimizer = self.optimizer.minimize(loss)
-        # self.opt_vars = self.optimizer.variables()
-
-        # # MAP estimate
-        # temp = set(tf.global_variables())
-        # self.yhat_map = self.build(sample=False, build_layer=False)    # Forward propagation without sampling
-        # self.loss_map = tf.reduce_mean(tf.square(self.y - self.yhat_map))   # MAP loss
-        # self.vars.update(set(tf.global_variables()) - temp)
 
     def init_layers(self, prior_sigma1, prior_sigma2, prior_pi):
         # Initialize all the layers with hyper-parameters
@@ -386,7 +362,7 @@ class BayesByBackpropConv(BayesByBackprop):
         h = self.dense_layers[-1](h, sample=sample)
         return h
 
-    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, epoch=0, lr=None):
+    def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Override so that we can include random translation, rotation, and flips for data augmentation"""
         for step in range(steps):
             x_batch, y_batch = next(batcher)

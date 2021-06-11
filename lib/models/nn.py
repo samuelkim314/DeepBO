@@ -4,10 +4,10 @@ from lib.models import ensemble, bbb, nn_base
 import tensorflow as tf
 
 
-def choose_model(uncertainty, dm, results_dir=None, drop_rate=0.0, lr=1e-4, lr_decay=0.9, n_ensemble=10,
-                 print_loss=False, opt_name="adam", activation=None,
+def choose_model(uncertainty, dm, drop_rate=0.0, lr=1e-4, lr_decay=0.9, n_ensemble=10,
+                 opt_name="adam", activation=None,
                  bbb_sigma1=3.6, bbb_sigma2=0.1, bbb_pi=0.25, bbb_sigma=0.001,
-                 n_units=None, n_channels=None, periodic=True, ub=None, obj_fun=lambda x: x):
+                 n_units=None, n_channels=None, periodic=True, obj_fun=lambda x: x):
     """Return an initialized model corresponding to the named Bayesian neural network along with its hyper-parameters"""
     uncertainty = uncertainty.lower()
     optimizer, lr_ph = get_optimizer(opt_name, lr, lr_decay)
@@ -15,37 +15,36 @@ def choose_model(uncertainty, dm, results_dir=None, drop_rate=0.0, lr=1e-4, lr_d
 
     # Model for predicting uncertainty
     if uncertainty == "dropout":
-        model = nn_base.Dropout(dm=dm, results_dir=results_dir, drop_rate=drop_rate, print_loss=print_loss,
+        model = nn_base.Dropout(dm=dm, drop_rate=drop_rate, 
                                 optimizer=optimizer, hidden_units=n_units)
     elif uncertainty == "dropout_conv":
-        model = nn_base.DropoutConv(dm=dm, results_dir=results_dir,
-                                    drop_rate=drop_rate, print_loss=print_loss,
+        model = nn_base.DropoutConv(dm=dm, drop_rate=drop_rate,
                                     hidden_units=n_units, n_channels=n_channels, optimizer=optimizer)
     elif uncertainty == "ensemble":
-        model = ensemble.Ensemble(dm=dm, results_dir=results_dir, n_networks=n_ensemble, print_loss=print_loss,
+        model = ensemble.Ensemble(dm=dm, n_networks=n_ensemble, 
                                   optimizer=optimizer, hidden_units=n_units, lr_ph=lr_ph, lr=lr)
     elif uncertainty == "conv_ensemble":
-        model = ensemble.ConvEnsemble(dm=dm, results_dir=results_dir, n_networks=n_ensemble, print_loss=print_loss,
+        model = ensemble.ConvEnsemble(dm=dm, n_networks=n_ensemble, 
                                       optimizer=optimizer, n_channels=n_channels, hidden_units=n_units,
                                       lr_ph=lr_ph, lr=lr)
     elif uncertainty == "bbb":
-        model = bbb.BayesByBackprop(dm=dm, results_dir=results_dir, print_loss=print_loss,
+        model = bbb.BayesByBackprop(dm=dm, 
                                     activation=activation,
                                     prior_sigma1=bbb_sigma1, prior_sigma2=bbb_sigma2, prior_pi=bbb_pi,
-                                    hidden_units=n_units, optimizer=optimizer, ub=ub, lr_ph=lr_ph, lr=lr)
+                                    hidden_units=n_units, optimizer=optimizer, lr_ph=lr_ph, lr=lr)
     elif uncertainty == "bbb_conv":
-        model = bbb.BayesByBackpropConv(dm=dm, results_dir=results_dir, print_loss=print_loss, optimizer=optimizer,
+        model = bbb.BayesByBackpropConv(dm=dm,  optimizer=optimizer,
                                         prior_sigma1=bbb_sigma1, prior_sigma2=bbb_sigma2, prior_pi=bbb_pi,
                                         data_sigma=bbb_sigma, hidden_units=n_units, n_channels=n_channels,
                                         periodic=periodic, lr_ph=lr_ph, lr=lr)
     elif uncertainty == "neurallinear":
-        model = nn_base.NeuralLinear(dm=dm, results_dir=results_dir, print_loss=print_loss, optimizer=optimizer,
+        model = nn_base.NeuralLinear(dm=dm,  optimizer=optimizer,
                                      hidden_units=n_units, lr_ph=lr_ph, lr=lr)
     elif uncertainty == "conv_neurallinear":
-        model = nn_base.ConvNeuralLinear(dm=dm, results_dir=results_dir, print_loss=print_loss, optimizer=optimizer,
-                                     hidden_units=n_units, n_channels=n_channels, lr_ph=lr_ph, lr=lr)
+        model = nn_base.ConvNeuralLinear(dm=dm,  optimizer=optimizer,
+                                         hidden_units=n_units, n_channels=n_channels, lr_ph=lr_ph, lr=lr)
     elif uncertainty == 'single':
-        model = nn_base.Single(dm=dm, results_dir=results_dir, print_loss=print_loss, optimizer=optimizer,
+        model = nn_base.Single(dm=dm,  optimizer=optimizer,
                                hidden_units=n_units, obj_fun=obj_fun)
     else:
         raise ValueError("Could not find a model with that name.")
