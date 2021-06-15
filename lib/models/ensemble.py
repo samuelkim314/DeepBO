@@ -5,14 +5,12 @@ from lib.models.nn_base import BaseNetwork, CNN
 
 class Ensemble(BaseNetwork):
     # Ensemble of fully-connected networks
-    def __init__(self, dm, n_networks=10, optimizer=None,
-                 hidden_units=None, lr_ph=None, lr=1e-4):
+    def __init__(self, dm, n_networks=10, optimizer=None, hidden_units=None, lr_ph=None, lr=1e-4):
 
         self.y_hat_list = []
         self.n_networks = n_networks
 
-        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units,
-                         lr_ph=lr_ph, lr=lr)
+        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units, lr_ph=lr_ph, lr=lr)
 
         self.N = tf.placeholder_with_default(float(dm.n), shape=(), name="num_batches")
 

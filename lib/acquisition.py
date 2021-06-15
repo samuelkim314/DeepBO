@@ -59,18 +59,6 @@ def ei_direct_batched(x, f_surrogate, y_best, batch_size=32):
     return j_max * batch_size + i_max_list[j_max], x_max_list[j_max]
 
 
-def ei_im(x, x_nn, f_surrogate, y_best, obj_fun=lambda x: x[:, 0, :]):
-    """Expected improvement (EI)"""
-    warnings.warn('ei_im is deprecated. Use ei.', DeprecationWarning)
-    y_pred = obj_fun(f_surrogate(x_nn))
-    y_mean = np.mean(y_pred, axis=1)
-    y_std = np.std(y_pred, axis=1)
-    prob = (y_mean - y_best) * norm.cdf((y_mean - y_best) / y_std) + \
-           y_std * norm.pdf((y_mean - y_best) / y_std)
-    i_max = [np.argmax(prob)]
-    return x[i_max], x_nn[i_max]
-
-
 def ei_batch(x, f, y_best, obj_fun=lambda x: x[:, 0, :]):
     """Expected improvement (EI) - just used for ei_batched"""
     y_pred = obj_fun(f(x))
@@ -96,18 +84,6 @@ def ei_batched(x, f, y_best, obj_fun):
         y_max_list.append(y_max_j)
     j_max = np.argmax(y_max_list)
     return x_max_list[j_max]
-
-
-def ei_direct_im(x, x_nn, f_surrogate, y_best):
-    """Expected improvement (EI), where the surrogate model predicts the objective function directly."""
-    warnings.warn('ei_direct_im is deprecated. Use ei.', DeprecationWarning)
-    y_pred = f_surrogate(x_nn)
-    y_mean = np.mean(y_pred, axis=2)
-    y_std = np.std(y_pred, axis=2)
-    prob = (y_mean - y_best) * norm.cdf((y_mean - y_best) / y_std) + \
-           y_std * norm.pdf((y_mean - y_best) / y_std)
-    i_max = [np.argmax(prob)]
-    return x[i_max], x_nn[i_max]
 
 
 def ei_mc_batch(x, f, y_best, obj_fun=lambda x: x[:, 0, :]):

@@ -343,8 +343,7 @@ class NeuralLinear(BaseNetwork):
         else:
             self.hidden_units = hidden_units
 
-        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units,
-                         lr_ph=lr_ph, lr=lr)
+        super().__init__(dm, optimizer=optimizer, hidden_units=hidden_units, lr_ph=lr_ph, lr=lr)
         self.clf = sklearn.linear_model.BayesianRidge()
 
     def build(self):

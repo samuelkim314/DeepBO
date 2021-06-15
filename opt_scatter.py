@@ -11,9 +11,9 @@ import numpy as np
 from scattering import calc_spectrum
 
 
-def get_obj(params, objective='orange'):
-    if objective == 'orange':
-        # Maximize the min scattering in 600-640nm range, minimize the max scattering outside of that
+def get_obj(params, objective='narrow'):
+    if objective == 'narrow':
+        # Maximize the min scattering in 600-640nm range, minimize scattering outside of that
         lam = params.lam
         i1, = np.where(lam == 600)
         i2, = np.where(lam == 640)  # non-inclusive
@@ -34,11 +34,11 @@ def get_obj(params, objective='orange'):
     return obj_fun
 
 
-def get_problem(params, objective="orange"):
+def get_problem(params, objective="narrow"):
     """Get objective function and problem parameters"""
 
     # Different objective functions to maximize during optimization
-    if objective == "orange" or objective == 'hipass':
+    if objective == "narrow" or objective == 'hipass':
         def prob(x):
             return params.calc_data(x)
 
@@ -49,13 +49,12 @@ def get_problem(params, objective="orange"):
 
 
 def main(results_dir,  n_batch, n_epochs, n_train=1000,
-         opt="random", acquisition="ei", objective="orange", x_dim=6, trials=1, nn_args=None,
+         opt="random", acquisition="ei", objective="narrow", x_dim=6, trials=1, nn_args=None,
          n_epochs_continue=10, iter_restart_training=100, af_n=30, af_m=int(1e4), trial_i=0,
          n_units=256, n_layers=8, n_start=5, lr_cycle=False, lr_cycle_base=False):
-    params = calc_spectrum.MieScattering(n_layers=x_dim)
-
-    prob_fun = get_problem(params, objective=objective)
-    obj_fun = get_obj(params, objective=objective)
+    params = calc_spectrum.MieScattering(n_layers=x_dim)    # object to calculate data
+    prob_fun = get_problem(params, objective=objective)     # function to get auxiliary information
+    obj_fun = get_obj(params, objective=objective)      # function takes auxiliary information and calculates objective
 
     if opt == "random":
         # Random selection
@@ -213,7 +212,7 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                 # Random initialization of initial dataset
                 X_train = params.sample_x(n_start)
                 X_nn_train = params.to_nn_input(X_train)
-                Z_train = prob_fun(X_train)  # Calculate Mie scattering
+                Z_train = prob_fun(X_train)  # Auxiliary information
                 Y_train = obj_fun(Z_train)
 
                 dm = data_manager.DataManager(X_nn_train, Z_train, n_batch)
@@ -327,7 +326,7 @@ if __name__ == "__main__":
                         choices=["EI", "MPI", "LCB"],
                         help="Acquisition function to label a new point")
     parser.add_argument('--af-m', type=int, default=int(1e5), help='Number of data points to sample for acquisition')
-    parser.add_argument("--objective", type=str, default="orange")
+    parser.add_argument("--objective", type=str, default="narrow")
     parser.add_argument("--trials", type=int, default=1)
     parser.add_argument('--trial-i', type=int, default=0)
     parser = nn.add_args(parser)
