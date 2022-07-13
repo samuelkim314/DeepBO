@@ -165,7 +165,7 @@ def main(results_dir,  n_batch, n_epochs, n_train=1000,
                         i_new, x_nn_new = bo.ei_mc(x_nn_sample, f, y_best, batch_size=int(2**13))
                         i_new = [i_new]     # Temporary hack to adjust for dimension
                     else:
-                        i_new, x_nn_new = bo.ei_direct(x_nn_sample, f, y_best)
+                        i_new, x_nn_new, _ = bo.ei_direct_batch(x_nn_sample, f, y_best)
                     x_new = x_sample[i_new]
 
                     y_new = obj_fun(prob_fun(x_new))[:, np.newaxis]

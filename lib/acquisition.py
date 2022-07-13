@@ -17,17 +17,6 @@ def ei(x, f, y_best, obj_fun=lambda x: x[:, 0, :]):
     return x[i_max, :]
 
 
-def ei_direct(x, f_surrogate, y_best):
-    """Expected improvement (EI), where the surrogate model predicts mean and standard deviation"""
-    y_mean, y_std = f_surrogate(x)
-    y_mean = y_mean[:, 0]
-    y_std = y_std[:, 0]
-    prob = (y_mean - y_best) * norm.cdf((y_mean - y_best) / y_std) + \
-           y_std * norm.pdf((y_mean - y_best) / y_std)
-    i_max = [np.argmax(prob)]
-    return i_max, x[i_max, :]
-
-
 def ei_direct_batch(x, f_surrogate, y_best):
     """Expected improvement (EI), where the surrogate model predicts mean and standard deviation"""
     y_mean, y_std = f_surrogate(x)
@@ -39,7 +28,7 @@ def ei_direct_batch(x, f_surrogate, y_best):
     return i_max, x[i_max], prob[i_max]
 
 
-def ei_direct_batched(x, f_surrogate, y_best, batch_size=32):
+def ei_direct(x, f_surrogate, y_best, batch_size=32):
     """Expected improvement (EI), where the surrogate model predicts mean and standard deviation. Inference is split up
     into batches to avoid overflowing memory
 
@@ -57,33 +46,6 @@ def ei_direct_batched(x, f_surrogate, y_best, batch_size=32):
         y_max_list.append(y_max_j)
     j_max = np.argmax(y_max_list)
     return j_max * batch_size + i_max_list[j_max], x_max_list[j_max]
-
-
-def ei_batch(x, f, y_best, obj_fun=lambda x: x[:, 0, :]):
-    """Expected improvement (EI) - just used for ei_batched"""
-    y_pred = obj_fun(f(x))
-    y_mean = np.mean(y_pred, axis=1)
-    y_std = np.std(y_pred, axis=1)
-    prob = (y_mean - y_best) * norm.cdf((y_mean - y_best)/y_std) + \
-           y_std * norm.pdf((y_mean - y_best)/y_std)
-    i_max = [np.argmax(prob)]
-    return x[i_max, :], prob[i_max]
-
-
-def ei_batched(x, f, y_best, obj_fun):
-    # n_batch = 10
-    n = x.shape[0]
-    # batch_size = int(n / n_batch)
-    batch_size = int(1e4)
-    batch_ind = range(0, n, batch_size)
-    x_max_list = []
-    y_max_list = []
-    for j_batch in batch_ind:
-        x_max_j, y_max_j = ei_batch(x[j_batch:j_batch + batch_size], f, y_best, obj_fun)
-        x_max_list.append(x_max_j)
-        y_max_list.append(y_max_j)
-    j_max = np.argmax(y_max_list)
-    return x_max_list[j_max]
 
 
 def ei_mc_batch(x, f, y_best, obj_fun=lambda x: x[:, 0, :]):
@@ -238,4 +200,4 @@ if __name__ == '__main__':
     def obj_fun(x):
         return x[:, 0, :]
 
-    print(ei_batched(x_sample, f_noise, y_best, obj_fun))
+    print(ei(x_sample, f_noise, y_best, obj_fun))

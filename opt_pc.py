@@ -10,16 +10,13 @@ import sys
 import numpy as np
 from pc import level_set
 from pc import DOS_GGR
-import nlopt
 # os.environ["XLA_FLAGS"] = "--xla_gpu_cuda_data_dir=/usr/local/cuda"
 
 xdim = 51
 
 
-def get_obj(objective='gap'):
-    if objective == 'gap':
-        return None
-    elif objective == 'dos' or objective == 'dos10':
+def get_obj(objective='dos'):
+    if objective == 'dos':
         def obj_fun(dos):
             dosmin = np.sum(dos[:, 300:350], axis=1)
             dosmax = np.sum(dos[:, :300], axis=1) + np.sum(dos[:, 350:], axis=1)
@@ -30,24 +27,9 @@ def get_obj(objective='gap'):
     return obj_fun
 
 
-def get_problem(leveller=None, objective="gap", sample_full=True):
+def get_problem(leveller=None, objective="dos", sample_full=True):
     """Get objective function and problem parameters"""
-
-    if objective == "gap":
-        return None
-    elif objective == "dos":
-        def obj_fun(x):
-            sys.stdout = open(os.devnull, 'w')
-            eps_arr = leveller.calc_data(x, sample_level=True)
-            dos_arr = []
-            for eps_i in eps_arr:
-                _, dos = DOS_GGR.main(eps_i)
-
-                dos_arr.append(dos)
-            sys.stdout = sys.__stdout__
-
-            return np.array(dos_arr)
-    elif objective == "dos10":
+    if objective == "dos":
         def obj_fun(x):
             sys.stdout = open(os.devnull, 'w')
             eps_arr = leveller.calc_data(x, sample_level=True, sample_full=sample_full)
@@ -64,16 +46,9 @@ def get_problem(leveller=None, objective="gap", sample_full=True):
 
     return obj_fun
 
-#
-#
-# obj_fun2 = get_obj(objective='dos')
-# x = np.random.rand(5, 500)
-# print(obj_fun2(x))
-# quit()
-
 
 def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
-         opt="random", acquisition="ei", objective="gap", trials=1, nn_args=None, kernel='nngp',
+         opt="random", acquisition="ei", objective="dos", trials=1, nn_args=None, kernel='nngp',
          n_epochs_continue=10, iter_restart_training=100, af_n=30, weighted_training=True, trial_i=0, augment=False,
          af_m=int(1e5), n_units=0, n_layers=0, lr_cycle=False, lr_cycle_base=False):
     leveller = level_set.FourierLevelSet(eps_in=1.0, eps_out=11.4)
@@ -221,7 +196,7 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                         if mc:
                             i_max, x_nn_new = bo.ei_mc(x_nn_sample, f, y_best, batch_size=512)
                         else:
-                            i_max, x_nn_new = bo.ei_direct_batched(x_nn_sample, f, y_best)
+                            i_max, x_nn_new = bo.ei_direct(x_nn_sample, f, y_best)
                             x_nn_new = np.array([x_nn_new])
                         x_new = x_sample[[i_max]]
                     else:
@@ -229,7 +204,7 @@ def main(results_dir, n_batch, n_epochs, n_train=1000, sample_full=True,
                         if mc:
                             i_max, x_new = bo.ei_mc(x_sample, f, y_best)
                         else:
-                            i_max, x_new = bo.ei_direct_batched(x_sample, f, y_best)
+                            i_max, x_new = bo.ei_direct(x_sample, f, y_best)
                             x_new = np.array([x_new])
                         x_nn_new = x_new
 
@@ -385,13 +360,13 @@ if __name__ == "__main__":
     parser.add_argument("--n-epochs-continue", type=int, default=10)
     parser.add_argument("--iter-restart-training", type=int, default=100)
     parser.add_argument("--n_train", type=int, default=1000)
-    # Dataset
+    # Dataset. sample_full=True corresponds to PC-A dataset
     parser.add_argument('--sample-full', dest='sample_full', action='store_true')
     parser.add_argument('--no-sample-full', dest='sample_full', action='store_false')
+    parser.set_defaults(sample_full=True)
     # Optional arguments for size of neural network - just the fully-connected layers
     parser.add_argument("--n-units", type=int, default=256)
     parser.add_argument("--n-layers", type=int, default=4)
-    parser.set_defaults(sample_full=True)
     # Weighted training for nn when adding new data point
     parser.add_argument('--weighted-training', dest='weighted_training', action='store_true')
     parser.add_argument('--no-weighted-training', dest='weighted_training', action='store_false')
@@ -419,7 +394,7 @@ if __name__ == "__main__":
     parser.add_argument("--acquisition", type=str, default="EI",
                         choices=["EI", "MPI", "LCB", 'EI-MC'],
                         help="Acquisition function to label a new point")
-    parser.add_argument("--objective", type=str, default="gap", choices=["gap", "dos", 'dos10'])
+    parser.add_argument("--objective", type=str, default="dos", choices=["dos"])
     parser.add_argument("--trials", type=int, default=1)
     parser.add_argument('--trial-i', type=int, default=0)
     parser = nn.add_args(parser)
