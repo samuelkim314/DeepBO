@@ -1,0 +1,4 @@
+#!/bin/sh
+##NBS-queue: long
+# This script assumes that a single argument is passed, and that this argument is an integer to be passed to test_maEI.py
+python "test_maEI.py ${1}"

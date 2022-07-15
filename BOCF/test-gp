@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# #SBATCH --gres=gpu:volta:1
+#SBATCH -c 4
+#SBATCH -o test-gp-%j-%a.out
+#SBATCH -a 0-4
+# #SBATCH --exclusive
+
+# module load anaconda/2020b
+# conda init
+conda activate bocf
+
+# python opt_scatter_bocf.py  --results-dir results/opt/scatter-hipass/bocf --trials 1 --trial-i $SLURM_ARRAY_TASK_ID  --objective hipass &
+# python opt_scatter_bocf.py  --results-dir results/opt/scatter-orange/bocf --trials 1 --trial-i $SLURM_ARRAY_TASK_ID  --objective orange &
+# wait
+
+python test_2a.py &
+python test_langermann.py &
+wait

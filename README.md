@@ -22,30 +22,20 @@ Note that Neural Tangents version 0.3.6 has changed the API and will not work, s
 For more details on installing Neural Tangents, its dependencies, or the GPU version, see here:
 https://github.com/google/neural-tangents
 
-## Usage
 
-An example of using BO with auxiliary information on the nanoparticle scattering problem is given below.
+## Experiments
 
-```
-python opt_scatter.py --opt nn2 --uncertainty ensemble --acquisition EI --objective hipass --n-units 256 --n-layers 8
-```
+### Bayesian Optimization of Composite Functions
 
-The algorithm used is controlled by the `--opt` argument. `nn` denotes using a BNN (excluding infinite-width networks)
-and `nn2` marks using BNNs with auxiliary information. 
-The exact BNN architecture is specified by `--uncertainty` 
-with choices and hyperparameter arguments found in  `lib/models/nn`
+`BOCF/` is mostly copy + pasted from this repository (https://github.com/RaulAstudillo/bocf) which appears to be 
+an unofficial implementation of the following paper, which performs Bayesian optimization of composite functions that
+produce intermediate information using GPs:
 
-The size of X_pool for the photonic crystal task is m=10^4 by default due to increased memory requirements. If you want
-to use m=10^5 similar to the paper, then you can use the command 
+Astudillo, Raul, and Peter Frazier. "Bayesian optimization of composite functions." *International Conference on Machine Learning.* PMLR, 2019.
 
-```
-python opt_pc.py --opt cnn2 --uncertainty ensemble --af-m 100000
-```
-
-For applying GPs (or any other optimization algorithm that operates over continuous spaces) to the chemistry problem,
-run
-```python chem/soap.py```
-first to generate the SOAP descriptors of the QM9 dataset.
+We have added the files `BOCF/opt_scatter_bocf.py` and `BOCF/opt_pc_bocf.py` for optimization on the nanoparticle
+scattering and photonic crystal problems, respectively. Note that this library has its own set of requirements and
+will require a separate conda environment from our main code.
 
 ## Code Organization
 
@@ -70,4 +60,5 @@ BNN models are located in the directory `lib/models/`.
 separated out all GNN variants used for the chemistry task into this file, which includes ensembles, BBB, and neural linear variants of GNNs.
 
 ## License
-[MIT](https://choosealicense.com/licenses/mit/)
+We use the [MIT](https://choosealicense.com/licenses/mit/) for our code. 
+Note that libraries we copy+pasted into here may have their own licenses.
