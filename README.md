@@ -1,6 +1,6 @@
 # Deep Bayesian Optimization for Problems with High-Dimensional Structure
 
-This library is the official repository for the following paper. If you use any of this code, please cite:
+This branch contains all of the other comparison experiments for the paper below. If you use any of this code, please cite:
 
 Kim, S., Lu, P. Y., Loh, C., Smith, J., Snoek, J., & Soljačić, M. (2021). Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure. *arXiv preprint arXiv:2104.11667.*
 
