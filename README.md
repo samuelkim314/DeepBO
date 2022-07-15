@@ -29,15 +29,22 @@ https://github.com/google/neural-tangents
 
 ### Bayesian Optimization of Composite Functions
 
-`BOCF/` is mostly copy + pasted from this repository (https://github.com/RaulAstudillo/bocf) which appears to be 
-an unofficial implementation of the following paper, which performs Bayesian optimization of composite functions that
-produce intermediate information using GPs:
-
-Astudillo, Raul, and Peter Frazier. "Bayesian optimization of composite functions." *International Conference on Machine Learning.* PMLR, 2019.
+`BOCF/` is mostly copy + pasted from [this repository](https://github.com/RaulAstudillo/bocf) which appears to be 
+an implementation of the paper [Bayesian optimization of composite functions(https://arxiv.org/abs/1906.01537), which performs Bayesian optimization of composite functions that
+produce intermediate information using GPs
 
 We have added the files `BOCF/opt_scatter_bocf.py` and `BOCF/opt_pc_bocf.py` for optimization on the nanoparticle
 scattering and photonic crystal problems, respectively. Note that this library has its own set of requirements and
 will require a separate conda environment from our main code.
+
+### Interpretable Neural Architecture Search using Bayesian Optimisation with Weisfeiler-Lehman Kernel (NAS-BOWL)
+
+`nasbowl/` is mostly copy + pasted from the [official repository](https://github.com/xingchenwan/nasbowl) for the paper 
+[Interpretable Neural Architecture Search via Bayesian Optimisation with Weisfeiler-Lehman Kernels](https://openreview.net/pdf?id=j9Rv7qdXjd).
+This work uses WL kernels, which are designed to operate on graphs, to perform neural architecture search via Bayesian
+optimization in which the architecture topology of a neural network is optimized. We adapt this code to perform
+Bayesian optimization on the chemistry problem, which is labelled as "Graph-GP" in our paper.
+The optimization can be run using the file `nasbowl/opt_chem_nasbowl.py`.
 
 ## Code Organization
 
