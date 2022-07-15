@@ -18,6 +18,10 @@ Some requirements are only needed for specific problems, namely:
 
 * Chemistry - requirements are listed in `requirements_chem.txt`.
 
+Note that Neural Tangents version 0.3.6 has changed the API and will not work, so it is recommended to install 0.3.5. 
+For more details on installing Neural Tangents, its dependencies, or the GPU version, see here:
+https://github.com/google/neural-tangents
+
 ## Usage
 
 An example of using BO with auxiliary information on the nanoparticle scattering problem is given below.
