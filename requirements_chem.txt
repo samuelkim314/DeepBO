@@ -1,0 +1,6 @@
+keras
+networkx
+requests
+pandas
+ase
+dscribe

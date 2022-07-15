@@ -1,6 +1,6 @@
 """Collection of neural network models for estimating prediction uncertainty"""
 import argparse
-from lib.models import ensemble, bbb, nn_base
+from lib.models import ensemble, bbb, nn_base, gnn
 import tensorflow as tf
 
 
@@ -46,6 +46,14 @@ def choose_model(uncertainty, dm, drop_rate=0.0, lr=1e-4, lr_decay=0.9, n_ensemb
     elif uncertainty == 'single':
         model = nn_base.Single(dm=dm,  optimizer=optimizer,
                                hidden_units=n_units, obj_fun=obj_fun)
+    elif uncertainty == "graph_neurallinear":
+        model = gnn.GraphNeuralLinear(dm=dm, optimizer=optimizer, lr_ph=lr_ph, lr=lr)
+    elif uncertainty == 'gnn_ensemble':
+        model = gnn.Ensemble(dm=dm, n_networks=n_ensemble, optimizer=optimizer, lr_ph=lr_ph, lr=lr)
+    elif uncertainty == 'gnn_bbb':
+        model = gnn.BBB(dm=dm, data_sigma=bbb_sigma, optimizer=optimizer, lr_ph=lr_ph, lr=lr)
+    elif uncertainty == 'gnn_bbbfc':
+        model = gnn.BBBFC(dm=dm, data_sigma=bbb_sigma, optimizer=optimizer, lr_ph=lr_ph, lr=lr)
     else:
         raise ValueError("Could not find a model with that name.")
     return model
@@ -89,7 +97,7 @@ def add_args(parser):
     parser.add_argument("--uncertainty", type=str, default="dropout",
                         choices=["dropout", "ensemble", "bbb", "neurallinear", "bbb_conv", 'dropout_conv',
                                  'mnf', 'gnn_ensemble', 'single', 'gnn_bbb', 'conv_ensemble', 'conv_neurallinear',
-                                 'graph_neurallinear'],
+                                 'graph_neurallinear', 'gnn_bbbfc'],
                         help="Model architecture to estimate prediction uncertainty")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
     parser.add_argument("--lr-decay", type=float, default=.9, help="Learning rate decay")
