@@ -67,5 +67,11 @@ BNN models are located in the directory `lib/models/`.
 * `lib/models/gnn.py`: All variants of graph neural network (GNN) models. Due to the additional dependencies, we have
 separated out all GNN variants used for the chemistry task into this file, which includes ensembles, BBB, and neural linear variants of GNNs.
 
+## Additional Experiments
+
+For conciseness and ease of use, we only include select methods (most of the BNNs, GPs, random sampling) in this library.
+If you would like to look at the additional experiments studied in our paper (GP variants, additional BNNs, non-BO methods),
+please check out the `fullexperiments` branch of this repository: https://github.com/samuelkim314/DeepBO/tree/fullexperiments
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
