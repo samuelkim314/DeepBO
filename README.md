@@ -1,8 +1,17 @@
 # Deep Bayesian Optimization for Problems with High-Dimensional Structure
 
-This library is the official repository for the following paper. If you use any of this code, please cite:
+This library is the official repository for the paper [Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure](https://arxiv.org/abs/2104.11667). 
+If you use any of this code, please cite:
 
-Kim, S., Lu, P. Y., Loh, C., Smith, J., Snoek, J., & Soljačić, M. (2021). Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure. *arXiv preprint arXiv:2104.11667.*
+```
+@article{kim2021deep,
+  title={Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure},
+  author={Kim, Samuel and Lu, Peter Y and Loh, Charlotte and Smith, Jamie and Snoek, Jasper and Solja{\v{c}}i{\'c}, Marin},
+  journal=arXiv preprint arXiv:2104.11667},
+  pages={arXiv--2104},
+  year={2021}
+}
+```
 
 We implement Bayesian Optimization (BO) using Bayesian neural networks (BNNs) as the surrogate model. 
 Our library allows BNNs to efficiently take advantage of auxiliary information, 
