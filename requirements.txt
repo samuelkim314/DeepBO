@@ -2,3 +2,4 @@ numpy
 GPyOpt
 tensorflow==1.15
 scikit-learn
+neural-tangents==0.3.5
