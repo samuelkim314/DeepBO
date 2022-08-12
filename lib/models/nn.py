@@ -94,7 +94,7 @@ def is_mc(model):
 
 def add_args(parser):
     """Add arguments controlling hyper-parameters of Bayesian neural network models"""
-    parser.add_argument("--uncertainty", type=str, default="dropout",
+    parser.add_argument("--uncertainty", type=str, default="ensemble",
                         choices=["dropout", "ensemble", "bbb", "neurallinear", "bbb_conv", 'dropout_conv',
                                  'mnf', 'gnn_ensemble', 'single', 'gnn_bbb', 'conv_ensemble', 'conv_neurallinear',
                                  'graph_neurallinear', 'gnn_bbbfc'],
