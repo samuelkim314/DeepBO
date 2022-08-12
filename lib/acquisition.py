@@ -24,7 +24,7 @@ def ei_direct_batch(x, f_surrogate, y_best):
     y_std = y_std[:, 0]
     prob = (y_mean - y_best) * norm.cdf((y_mean - y_best) / y_std) + \
            y_std * norm.pdf((y_mean - y_best) / y_std)
-    i_max = np.argmax(prob)
+    i_max = np.nanargmax(prob)
     return i_max, x[i_max], prob[i_max]
 
 

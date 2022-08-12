@@ -23,7 +23,7 @@ class Ensemble(BaseNetwork):
         for i in range(self.n_networks):
             y_hat.append(super().build())
         self.y_hat_list = y_hat
-        return tf.reduce_mean(y_hat)
+        return tf.reduce_mean(y_hat, axis=0)
 
     def predict(self, sess, X, sample=True):
         """Predict target value for X
@@ -78,7 +78,7 @@ class ConvEnsemble(CNN, Ensemble):
         for i in range(self.n_networks):
             y_hat.append(super().build())
         self.y_hat_list = y_hat
-        return tf.reduce_mean(y_hat)
+        return tf.reduce_mean(y_hat, axis=0)
 
     def train_epoch(self, sess, batcher, steps, N=None, augment=False, augment_sg11=False, lr=None):
         """Override so that we can include random translation for data augmentation"""
