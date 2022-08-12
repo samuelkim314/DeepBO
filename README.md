@@ -1,8 +1,17 @@
 # Deep Bayesian Optimization for Problems with High-Dimensional Structure
 
-This library is the official repository for the following paper. If you use any of this code, please cite:
+This library is the official repository for the paper [Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure](https://arxiv.org/abs/2104.11667). 
+If you use any of this code, please cite:
 
-Kim, S., Lu, P. Y., Loh, C., Smith, J., Snoek, J., & Soljačić, M. (2021). Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure. *arXiv preprint arXiv:2104.11667.*
+```
+@article{kim2021deep,
+  title={Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure},
+  author={Kim, Samuel and Lu, Peter Y and Loh, Charlotte and Smith, Jamie and Snoek, Jasper and Solja{\v{c}}i{\'c}, Marin},
+  journal=arXiv preprint arXiv:2104.11667},
+  pages={arXiv--2104},
+  year={2021}
+}
+```
 
 We implement Bayesian Optimization (BO) using Bayesian neural networks (BNNs) as the surrogate model. 
 Our library allows BNNs to efficiently take advantage of auxiliary information, 
@@ -66,6 +75,12 @@ BNN models are located in the directory `lib/models/`.
 * `lib/models/ensembles.py`: contains ensembles of fully-connected and convolutional NNs.
 * `lib/models/gnn.py`: All variants of graph neural network (GNN) models. Due to the additional dependencies, we have
 separated out all GNN variants used for the chemistry task into this file, which includes ensembles, BBB, and neural linear variants of GNNs.
+
+## Additional Experiments
+
+For conciseness and ease of use, we only include select methods (most of the BNNs, GPs, random sampling) in this library.
+If you would like to look at the additional experiments studied in our paper (GP variants, additional BNNs, non-BO methods),
+please check out the `fullexperiments` branch of this repository: https://github.com/samuelkim314/DeepBO/tree/fullexperiments
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
