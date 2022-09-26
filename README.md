@@ -1,15 +1,16 @@
 # Deep Bayesian Optimization for Problems with High-Dimensional Structure
 
-This library is the official repository for the paper [Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure](https://arxiv.org/abs/2104.11667). 
+This library is the official repository for the paper [Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure](https://openreview.net/pdf?id=tPMQ6Je2rB). 
 If you use any of this code, please cite:
 
 ```
-@article{kim2021deep,
-  title={Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure},
-  author={Kim, Samuel and Lu, Peter Y and Loh, Charlotte and Smith, Jamie and Snoek, Jasper and Solja{\v{c}}i{\'c}, Marin},
-  journal=arXiv preprint arXiv:2104.11667},
-  pages={arXiv--2104},
-  year={2021}
+@article{
+kim2022deep,
+title={Deep Learning for Bayesian Optimization of Scientific Problems with High-Dimensional Structure},
+author={Samuel Kim and Peter Y Lu and Charlotte Loh and Jamie Smith and Jasper Snoek and Marin Solja{\v{c}}i{\'c}},
+journal={Transactions on Machine Learning Research},
+year={2022},
+url={https://openreview.net/forum?id=tPMQ6Je2rB}
 }
 ```
 
